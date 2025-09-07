@@ -15,12 +15,4 @@ class RatingRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Rating::class);
     }
-
-    public function getAverageForRecipeId(int $recipeId): float
-    {
-        return (float) $this->createQueryBuilder('rt')
-            ->select('COALESCE(AVG(rt.score), 0)')
-            ->andWhere('rt.recipe = :rid')->setParameter('rid', $recipeId)
-            ->getQuery()->getSingleScalarResult();
-    }
 }

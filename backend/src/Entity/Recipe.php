@@ -7,6 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity(repositoryClass: RecipeRepository::class)]
 class Recipe
@@ -14,36 +15,44 @@ class Recipe
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['recipe:list','recipe:detail'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['recipe:list','recipe:detail'])]
     private ?string $title = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Groups(['recipe:detail'])]
     private ?string $description = null;
 
     #[ORM\Column]
+    #[Groups(['recipe:detail'])]
     private ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['recipe:detail'])]
     private ?\DateTimeImmutable $updatedAt = null;
 
     /**
      * @var Collection<int, Ingredient>
      */
     #[ORM\OneToMany(targetEntity: Ingredient::class, mappedBy: 'recipe')]
+    #[Groups(['recipe:detail'])]
     private Collection $ingredients;
 
     /**
      * @var Collection<int, Step>
      */
     #[ORM\OneToMany(targetEntity: Step::class, mappedBy: 'recipe')]
+    #[Groups(['recipe:detail'])]
     private Collection $steps;
 
     /**
      * @var Collection<int, Comment>
      */
     #[ORM\OneToMany(targetEntity: Comment::class, mappedBy: 'recipe')]
+    #[Groups(['recipe:detail'])]
     private Collection $comments;
 
     /**
@@ -54,6 +63,7 @@ class Recipe
 
     #[ORM\ManyToOne(inversedBy: 'recipes')]
     #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['recipe:detail'])]
     private ?User $author = null;
 
     public function __construct()
@@ -249,5 +259,18 @@ class Recipe
         $this->author = $author;
 
         return $this;
+    }
+
+    #[Groups(['recipe:list','recipe:detail'])]
+    public function getAverageRating(): ?float
+    {
+        // TODO: implement
+        return 0.5;
+    }
+
+    #[Groups(['recipe:list'])]
+    public function getCommentCount(): int
+    {
+        return count($this->comments);
     }
 }

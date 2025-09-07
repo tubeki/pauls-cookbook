@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Repository\StepRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity(repositoryClass: StepRepository::class)]
 class Step
@@ -12,12 +13,15 @@ class Step
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['recipe:detail'])]
     private ?int $id = null;
 
     #[ORM\Column]
+    #[Groups(['recipe:detail'])]
     private ?int $position = null;
 
     #[ORM\Column(type: Types::TEXT)]
+    #[Groups(['recipe:detail'])]
     private ?string $instruction = null;
 
     #[ORM\ManyToOne(inversedBy: 'steps')]

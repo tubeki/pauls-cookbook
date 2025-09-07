@@ -15,12 +15,4 @@ class CommentRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Comment::class);
     }
-
-    public function countForRecipeId(int $recipeId): int
-    {
-        return (int) $this->createQueryBuilder('c')
-            ->select('COUNT(c.id)')
-            ->andWhere('c.recipe = :rid')->setParameter('rid', $recipeId)
-            ->getQuery()->getSingleScalarResult();
-    }
 }

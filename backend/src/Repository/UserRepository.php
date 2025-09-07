@@ -32,15 +32,4 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         $this->getEntityManager()->persist($user);
         $this->getEntityManager()->flush();
     }
-
-    public function findAuthorForRecipeId(int $recipeId): ?User
-    {
-        // Handy if you don’t eager-load author via RecipeRepository
-        return $this->_em->createQueryBuilder()
-            ->select('u')
-            ->from(User::class, 'u')
-            ->innerJoin('u.recipes', 'r') // <- adjust inverse side if needed
-            ->andWhere('r.id = :rid')->setParameter('rid', $recipeId)
-            ->getQuery()->getOneOrNullResult();
-    }
 }

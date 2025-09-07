@@ -15,13 +15,4 @@ class StepRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Step::class);
     }
-
-    /** @return Step[] */
-    public function findOrderedByRecipeId(int $recipeId): array
-    {
-        return $this->createQueryBuilder('s')
-            ->andWhere('s.recipe = :rid')->setParameter('rid', $recipeId)
-            ->orderBy('s.position', 'ASC') // <- or s.id
-            ->getQuery()->getResult();
-    }
 }

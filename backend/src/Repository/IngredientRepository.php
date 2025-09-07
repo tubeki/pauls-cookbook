@@ -15,12 +15,4 @@ class IngredientRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Ingredient::class);
     }
-
-    /** @return Ingredient[] */
-    public function findByRecipeId(int $recipeId): array
-    {
-        return $this->createQueryBuilder('i')
-            ->andWhere('i.recipe = :rid')->setParameter('rid', $recipeId)
-            ->orderBy('i.id', 'ASC')->getQuery()->getResult();
-    }
 }
