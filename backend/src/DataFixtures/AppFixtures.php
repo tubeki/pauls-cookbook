@@ -36,10 +36,11 @@ class AppFixtures extends Fixture
         $manager->persist($user);
 
         // --- Helper to create a recipe with 4 ingredients & 4 steps ---
-        $makeRecipe = function (string $title, string $desc) use ($manager): Recipe {
+        $makeRecipe = function (string $title, string $desc, User $author) use ($manager): Recipe {
             $recipe = (new Recipe())
                 ->setTitle($title)
-                ->setDescription($desc);
+                ->setDescription($desc)
+                ->setAuthor($author);
 
             // Ingredients (4)
             for ($i = 1; $i <= 4; $i++) {
@@ -65,9 +66,9 @@ class AppFixtures extends Fixture
         };
 
         // --- 3 recipes ---
-        $r1 = $makeRecipe('Pasta Aglio e Olio', 'Simple garlic & oil pasta.');
-        $r2 = $makeRecipe('Tomato Soup', 'Comforting tomato soup.');
-        $r3 = $makeRecipe('Pancakes', 'Fluffy breakfast pancakes.');
+        $r1 = $makeRecipe('Pasta Aglio e Olio', 'Simple garlic & oil pasta.', $admin);
+        $r2 = $makeRecipe('Tomato Soup', 'Comforting tomato soup.', $user);
+        $r3 = $makeRecipe('Pancakes', 'Fluffy breakfast pancakes.', $user);
 
         // --- Comments & ratings on 2 recipes (r1, r2) ---
         $comment = function (Recipe $r, User $author, string $body) use ($manager) {

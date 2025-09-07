@@ -52,6 +52,10 @@ class Recipe
     #[ORM\OneToMany(targetEntity: Rating::class, mappedBy: 'recipe')]
     private Collection $ratings;
 
+    #[ORM\ManyToOne(inversedBy: 'recipes')]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?User $author = null;
+
     public function __construct()
     {
         $this->ingredients = new ArrayCollection();
@@ -231,6 +235,18 @@ class Recipe
                 $rating->setRecipe(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getAuthor(): ?User
+    {
+        return $this->author;
+    }
+
+    public function setAuthor(?User $author): static
+    {
+        $this->author = $author;
 
         return $this;
     }
