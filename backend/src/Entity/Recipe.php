@@ -15,11 +15,11 @@ class Recipe
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['recipe:list','recipe:detail'])]
+    #[Groups(['recipe:list', 'recipe:detail'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['recipe:list','recipe:detail'])]
+    #[Groups(['recipe:list', 'recipe:detail'])]
     private ?string $title = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
@@ -37,14 +37,14 @@ class Recipe
     /**
      * @var Collection<int, Ingredient>
      */
-    #[ORM\OneToMany(targetEntity: Ingredient::class, mappedBy: 'recipe')]
+    #[ORM\OneToMany(targetEntity: Ingredient::class, mappedBy: 'recipe', orphanRemoval: true)]
     #[Groups(['recipe:detail'])]
     private Collection $ingredients;
 
     /**
      * @var Collection<int, Step>
      */
-    #[ORM\OneToMany(targetEntity: Step::class, mappedBy: 'recipe')]
+    #[ORM\OneToMany(targetEntity: Step::class, mappedBy: 'recipe', orphanRemoval: true)]
     #[Groups(['recipe:detail'])]
     private Collection $steps;
 
@@ -129,12 +129,9 @@ class Recipe
         return $this;
     }
 
-    /**
-     * @return Collection<int, Ingredient>
-     */
-    public function getIngredients(): Collection
+    public function getIngredients(): array
     {
-        return $this->ingredients;
+        return array_values($this->ingredients->toArray());
     }
 
     public function addIngredient(Ingredient $ingredient): static
@@ -159,12 +156,9 @@ class Recipe
         return $this;
     }
 
-    /**
-     * @return Collection<int, Step>
-     */
-    public function getSteps(): Collection
+    public function getSteps(): array
     {
-        return $this->steps;
+        return array_values($this->steps->toArray());
     }
 
     public function addStep(Step $step): static
@@ -261,7 +255,7 @@ class Recipe
         return $this;
     }
 
-    #[Groups(['recipe:list','recipe:detail'])]
+    #[Groups(['recipe:list', 'recipe:detail'])]
     public function getAverageRating(): ?float
     {
         $ratingTotal = 0;
@@ -272,8 +266,7 @@ class Recipe
         }
 
         /** @var Rating $rating */
-        foreach ($this->getRatings() as $rating)
-        {
+        foreach ($this->getRatings() as $rating) {
             $ratingTotal += $rating->getScore();
         }
 

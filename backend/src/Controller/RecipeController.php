@@ -130,6 +130,54 @@ class RecipeController extends AbstractController
         }
     }
 
+    #[Route('/{id}', name: 'api_recipes_update', methods: ['PUT','PATCH'])]
+    public function update(string $id, Request $request): JsonResponse
+    {
+        if (!ctype_digit($id)) {
+            return $this->json(
+                ['error' => 'invalid_id', 'message' => 'Recipe id must be numeric.'],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+
+        $recipe = $this->recipes->find((int) $id);
+        if (!$recipe) {
+            return $this->json(
+                ['error' => 'not_found', 'message' => 'Recipe not found.'],
+                Response::HTTP_NOT_FOUND
+            );
+        }
+
+        $data = json_decode($request->getContent(), true);
+        if (!is_array($data)) {
+            return $this->json(
+                ['error' => 'invalid_json', 'message' => 'Malformed JSON body.'],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+
+        // For PUT require title when missing on payload; for PATCH it’s optional
+        if ($request->isMethod('PUT') && (empty($data['title']) || !is_string($data['title']))) {
+            return $this->json(
+                ['error' => 'validation_failed', 'details' => ['title' => 'Title is required for PUT.']],
+                Response::HTTP_UNPROCESSABLE_ENTITY
+            );
+        }
+
+        try {
+            $this->applyRecipeData($recipe, $data);
+
+            $this->recipes->save($recipe, true);
+
+            return $this->json($recipe, Response::HTTP_OK, [], ['groups' => ['recipe:detail']]);
+        } catch (\Throwable $e) {
+            return $this->json(
+                ['error' => 'internal_error', 'message' => 'Unable to update recipe.'],
+                Response::HTTP_INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
     /**
      * Adds the recipe data to from the request to the Recipe entity instance
      * Expected JSON shape:
@@ -161,11 +209,19 @@ class RecipeController extends AbstractController
         }
     }
 
+    /**
+     * Removes all the Ingredients associated to the Recipe entity and recreates them based on the data from the request
+     * If the "ingredients" key is not present in the data it does not update anything
+     *
+     * @param Recipe $recipe
+     * @param array $items
+     * @return void
+     */
     private function resetIngredients(Recipe $recipe, array $items): void
     {
         // remove existing
         foreach ($recipe->getIngredients() as $existing) {
-            $recipe->removeIngredient($existing); // assumes orphanRemoval=true, otherwise $em->remove($existing);
+            $recipe->removeIngredient($existing);
         }
 
         // add new
@@ -174,17 +230,29 @@ class RecipeController extends AbstractController
                 // skip invalid item
                 continue;
             }
+
             $ingredient = new Ingredient();
+
             $ingredient->setName(trim((string) $row['name']));
+
             $recipe->addIngredient($ingredient);
+
             $this->ingredients->save($ingredient);
         }
     }
 
+    /**
+     * Removes all the Steps associated to the Recipe entity and recreates them based on the data from the request
+     * If the "ingredients" key is not present in the data it does not update anything
+     *
+     * @param Recipe $recipe
+     * @param array $items
+     * @return void
+     */
     private function resetSteps(Recipe $recipe, array $items): void
     {
         foreach ($recipe->getSteps() as $existing) {
-            $recipe->removeStep($existing); // assumes orphanRemoval=true, otherwise $em->remove($existing);
+            $recipe->removeStep($existing);
         }
 
         // Normalize and sort by position if given
@@ -206,9 +274,12 @@ class RecipeController extends AbstractController
         $auto = 1;
         foreach ($normalized as $row) {
             $step = new Step();
+
             $step->setInstruction($row['instruction']);
             $step->setPosition($row['position'] ?? $auto++);
+
             $recipe->addStep($step);
+
             $this->steps->save($step);
         }
     }
