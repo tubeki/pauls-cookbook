@@ -264,8 +264,20 @@ class Recipe
     #[Groups(['recipe:list','recipe:detail'])]
     public function getAverageRating(): ?float
     {
-        // TODO: implement
-        return 0.5;
+        $ratingTotal = 0;
+        $ratingCount = count($this->ratings);
+
+        if (0 === $ratingCount) {
+            return 0;
+        }
+
+        /** @var Rating $rating */
+        foreach ($this->getRatings() as $rating)
+        {
+            $ratingTotal += $rating->getScore();
+        }
+
+        return $ratingTotal / $ratingCount;
     }
 
     #[Groups(['recipe:list'])]

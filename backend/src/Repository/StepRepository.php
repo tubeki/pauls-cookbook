@@ -15,4 +15,22 @@ class StepRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Step::class);
     }
+
+    /**
+     * Save a Step entity. The flush argument saves it to the database.
+     *
+     * @param Step $entity
+     * @param bool $flush
+     * @return Step
+     */
+    public function save(Step $entity, bool $flush = false): Step
+    {
+        $this->getEntityManager()->persist($entity);
+
+        if ($flush) {
+            $this->getEntityManager()->flush();
+        }
+
+        return $entity;
+    }
 }

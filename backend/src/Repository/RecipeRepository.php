@@ -15,4 +15,22 @@ class RecipeRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Recipe::class);
     }
+
+    /**
+     * Save a Recipe entity. The flush argument saves it to the database.
+     *
+     * @param Recipe $entity
+     * @param bool $flush
+     * @return Recipe
+     */
+    public function save(Recipe $entity, bool $flush = false): Recipe
+    {
+        $this->getEntityManager()->persist($entity);
+
+        if ($flush) {
+            $this->getEntityManager()->flush();
+        }
+
+        return $entity;
+    }
 }
