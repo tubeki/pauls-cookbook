@@ -1,9 +1,11 @@
 <?php
 namespace App\Controller;
 
+use App\Entity\Comment;
 use App\Entity\Ingredient;
 use App\Entity\Recipe;
 use App\Entity\Step;
+use App\Repository\CommentRepository;
 use App\Repository\IngredientRepository;
 use App\Repository\RecipeRepository;
 use App\Repository\StepRepository;
@@ -22,7 +24,7 @@ class RecipeController extends AbstractController
         private RecipeRepository $recipes,
         private IngredientRepository $ingredients,
         private StepRepository $steps,
-        private UserRepository $users,
+        private CommentRepository $comments,
         private Security $security
     ) {}
 
@@ -182,6 +184,53 @@ class RecipeController extends AbstractController
                 Response::HTTP_INTERNAL_SERVER_ERROR
             );
         }
+    }
+
+    #[Route('/{id}/comments', name: 'add_recipe_comment', methods: ['POST'])]
+    public function addComment(string $id, Request $request): JsonResponse
+    {
+        if (!ctype_digit($id)) {
+            return $this->json(
+                ['error' => 'invalid_id', 'message' => 'Recipe id must be numeric.'],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+
+        // Auth check (helps produce 401 vs. 403 where appropriate)
+        $user = $this->security->getUser();
+        if (!$user) {
+            return $this->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        // Find recipe
+        /** @var Recipe|null $recipe */
+        $recipe = $this->recipes->find($id);
+        if (!$recipe) {
+            return $this->json(['error' => 'Recipe not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        // Parse & validate body
+        $payload = json_decode($request->getContent(), true);
+        if (!is_array($payload)) {
+            return $this->json(['error' => 'Invalid JSON'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $body = trim((string)($payload['body'] ?? ''));
+        if ($body === '') {
+            return $this->json(['error' => 'Field "body" is required'], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Create comment (schema: id, body, createdAt, author)
+        $comment = new Comment();
+        $comment->setBody($body);
+        $comment->setCreatedAt(new \DateTimeImmutable());
+        $comment->setAuthor($user);
+        $comment->setRecipe($recipe);
+
+        $this->comments->save($comment, true);
+
+        // Return the updated recipe using the allowed serialization group
+        return $this->json($recipe, Response::HTTP_CREATED, [], ['groups' => 'recipe:detail']);
     }
 
     /**

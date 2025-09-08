@@ -15,4 +15,22 @@ class CommentRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Comment::class);
     }
+
+    /**
+     * Save a Comment entity. The flush argument saves it to the database.
+     *
+     * @param Comment $entity
+     * @param bool $flush
+     * @return Comment
+     */
+    public function save(Comment $entity, bool $flush = false): Comment
+    {
+        $this->getEntityManager()->persist($entity);
+
+        if ($flush) {
+            $this->getEntityManager()->flush();
+        }
+
+        return $entity;
+    }
 }
