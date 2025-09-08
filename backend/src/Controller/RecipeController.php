@@ -1,5 +1,4 @@
 <?php
-// src/Controller/RecipeController.php
 namespace App\Controller;
 
 use App\Entity\Ingredient;
@@ -10,6 +9,7 @@ use App\Repository\RecipeRepository;
 use App\Repository\StepRepository;
 use App\Repository\UserRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,6 +23,7 @@ class RecipeController extends AbstractController
         private IngredientRepository $ingredients,
         private StepRepository $steps,
         private UserRepository $users,
+        private Security $security
     ) {}
 
     /**
@@ -114,8 +115,11 @@ class RecipeController extends AbstractController
             $recipe = new Recipe();
             $this->applyRecipeData($recipe, $data);
 
-            // TODO: temp assign this to the Regular User
-            $user = $this->users->find(6); // HARDCODED FOR NOW
+            // Retrieve authenticated user from JWT
+            $user = $this->security->getUser();
+            if ($user === null) {
+                return $this->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+            }
 
             $recipe->setAuthor($user);
 
@@ -166,6 +170,8 @@ class RecipeController extends AbstractController
 
         try {
             $this->applyRecipeData($recipe, $data);
+
+            $recipe->setUpdatedAt(new \DateTimeImmutable());
 
             $this->recipes->save($recipe, true);
 
