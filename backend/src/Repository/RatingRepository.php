@@ -15,4 +15,22 @@ class RatingRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Rating::class);
     }
+
+    /**
+     * Save a Rating entity. The flush argument saves it to the database.
+     *
+     * @param Rating $entity
+     * @param bool $flush
+     * @return Rating
+     */
+    public function save(Rating $entity, bool $flush = false): Rating
+    {
+        $this->getEntityManager()->persist($entity);
+
+        if ($flush) {
+            $this->getEntityManager()->flush();
+        }
+
+        return $entity;
+    }
 }

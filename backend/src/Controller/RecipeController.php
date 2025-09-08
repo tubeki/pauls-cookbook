@@ -3,13 +3,14 @@ namespace App\Controller;
 
 use App\Entity\Comment;
 use App\Entity\Ingredient;
+use App\Entity\Rating;
 use App\Entity\Recipe;
 use App\Entity\Step;
 use App\Repository\CommentRepository;
 use App\Repository\IngredientRepository;
+use App\Repository\RatingRepository;
 use App\Repository\RecipeRepository;
 use App\Repository\StepRepository;
-use App\Repository\UserRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -25,6 +26,7 @@ class RecipeController extends AbstractController
         private IngredientRepository $ingredients,
         private StepRepository $steps,
         private CommentRepository $comments,
+        private RatingRepository $ratings,
         private Security $security
     ) {}
 
@@ -231,6 +233,50 @@ class RecipeController extends AbstractController
 
         // Return the updated recipe using the allowed serialization group
         return $this->json($recipe, Response::HTTP_CREATED, [], ['groups' => 'recipe:detail']);
+    }
+
+    #[Route('/{id}/ratings', name: 'recipe_rate', methods: ['POST'])]
+    public function rateRecipe(int $id, Request $request): JsonResponse
+    {
+        $recipe = $this->recipes->find($id);
+        if (!$recipe) {
+            return $this->json(['error' => 'Recipe not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $data = json_decode($request->getContent(), true) ?? [];
+        if (!\array_key_exists('score', $data) || !\is_int($data['score'])) {
+            return $this->json(['error' => 'Field "score" (integer) is required'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $score = (int) $data['score'];
+        if ($score < 1 || $score > 5) {
+            return $this->json(['error' => 'Score must be between 1 and 5'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $user = $this->security->getUser();
+        if (!$user) {
+            return $this->json(['error' => 'Authentication required'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        // Create-or-update the current user's rating for this recipe
+        $rating = $this->ratings->findOneBy(['recipe' => $recipe, 'user' => $user]);
+        $status = Response::HTTP_CREATED;
+
+        if (!$rating) {
+            $rating = new Rating();
+            $rating->setRecipe($recipe);
+            $rating->setUser($user);
+            $this->ratings->save($rating);
+        } else {
+            $status = Response::HTTP_OK;
+        }
+
+        $rating->setScore($score);
+
+        $this->ratings->save($rating, true);
+
+        // Return the recipe detail so clients get updated averageRating
+        return $this->json($recipe, $status, [], ['groups' => ['recipe:detail']]);
     }
 
     /**
