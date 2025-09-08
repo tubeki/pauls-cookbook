@@ -1,11 +1,12 @@
-<script setup></script>
+<script setup>
+import AppLayout from "@/Layout/AppLayout.vue";
+</script>
 
 <template>
-  <h1>You did it!</h1>
-  <p>
-    Visit <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the
-    documentation
-  </p>
+  <AppLayout>
+    <RouterView />
+  </AppLayout>
 </template>
+
 
 <style scoped></style>
