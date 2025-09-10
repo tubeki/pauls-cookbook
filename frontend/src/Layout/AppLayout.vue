@@ -4,16 +4,8 @@ import SiteHeader from './SiteHeader.vue'
 // Temporary hardcoded state
 const user = null // or { name: 'Paul' }
 
-function handleLogin() {
-  console.log('login click')
-}
-
 function handleLogout() {
   console.log('logout click')
-}
-
-function handleLogoClick() {
-  console.log('logo click')
 }
 </script>
 
@@ -22,9 +14,7 @@ function handleLogoClick() {
     <div class="container">
       <SiteHeader
         :user="user"
-        @login="handleLogin"
         @logout="handleLogout"
-        @logo-click="handleLogoClick"
       />
     </div>
 
