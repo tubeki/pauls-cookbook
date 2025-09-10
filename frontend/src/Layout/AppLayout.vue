@@ -25,6 +25,10 @@ function handleLogout() {
 </template>
 
 <style scoped>
+body {
+  margin: 0;
+}
+
 .app {
   min-height: 100vh;
   background: #f9f9f9;
@@ -35,9 +39,5 @@ function handleLogout() {
 .container {
   max-width: 960px;
   margin: 0 auto
-}
-
-.page {
-  padding: 1rem 2rem
 }
 </style>
