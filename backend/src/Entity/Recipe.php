@@ -59,6 +59,7 @@ class Recipe
      * @var Collection<int, Rating>
      */
     #[ORM\OneToMany(targetEntity: Rating::class, mappedBy: 'recipe')]
+    #[Groups(['recipe:detail'])]
     private Collection $ratings;
 
     #[ORM\ManyToOne(inversedBy: 'recipes')]

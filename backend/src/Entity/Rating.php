@@ -12,9 +12,11 @@ class Rating
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['recipe:detail'])]
     private ?int $id = null;
 
     #[ORM\Column]
+    #[Groups(['recipe:detail'])]
     private ?int $score = null;
 
     #[ORM\ManyToOne(inversedBy: 'ratings')]
@@ -23,6 +25,7 @@ class Rating
 
     #[ORM\ManyToOne(inversedBy: 'ratings')]
     #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['recipe:detail'])]
     private ?User $user = null;
 
     public function getId(): ?int

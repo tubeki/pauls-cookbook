@@ -18,14 +18,31 @@
 </template>
 
 <script setup>
-const recipes = [
-  {id: 4, title: "Pasta Aglio e Olio", averageRating: 4.5, commentCount: 2},
-  {id: 5, title: "Tomato Soup", averageRating: 4.5, commentCount: 2},
-  {id: 6, title: "Pancakes", averageRating: 0, commentCount: 0},
-  {id: 7, title: "New Recipe", averageRating: 4.5, commentCount: 2},
-  {id: 8, title: "TITITITITITIITITITIITT", averageRating: 0, commentCount: 0},
-  {id: 9, title: "New Recipe 2", averageRating: 0, commentCount: 0}
-];
+import { ref, onMounted } from 'vue'
+
+const recipes = ref([])
+const loading = ref(false)
+const error = ref(null)
+
+async function loadRecipes() {
+  loading.value = true
+  error.value = null
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/recipes`, {
+      headers: { 'Accept': 'application/json' }
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    // Expecting an array of { id, title, averageRating, commentCount }
+    recipes.value = await res.json()
+  } catch (e) {
+    error.value = e.message || 'Failed to load recipes'
+    recipes.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadRecipes)
 </script>
 
 <style scoped>

@@ -26,6 +26,43 @@
         <p class="desc">{{ recipe.description }}</p>
       </section>
 
+      <section class="section" v-if="canRate && recipe">
+        <h3>Your rating</h3>
+
+        <form class="rate" @submit.prevent="submitRating">
+          <fieldset role="radiogroup" aria-label="Rate this recipe" class="stars">
+            <label
+              v-for="n in 5"
+              :key="n"
+              :for="`rate-${n}`"
+              :class="{ 'is-selected': selectedRating === String(n) }"
+              style="margin-right:.5rem; cursor:pointer"
+            >
+              <input
+                type="radio"
+                name="value"
+                :id="`rate-${n}`"
+                :value="String(n)"
+                v-model="selectedRating"
+                :disabled="ratingPosting"
+                style="margin-right:.25rem"
+              />
+              {{ n }}
+            </label>
+          </fieldset>
+
+          <button type="submit" class="btn" :disabled="ratingPosting || !selectedRating">
+            {{ ratingPosting ? 'Submitting…' : 'Submit rating' }}
+          </button>
+
+          <p v-if="ratingError" class="muted" style="margin-top:.5rem">Error: {{ ratingError }}</p>
+        </form>
+
+        <p class="muted" style="margin-top:.5rem">
+          Average rating: {{ recipe.averageRating ? Number(recipe.averageRating).toFixed(1) : '—' }}
+        </p>
+      </section>
+
       <section class="section">
         <h3>Ingredients</h3>
         <div class="list">
@@ -112,6 +149,14 @@ const canComment = computed(() => Boolean(token) && roles.includes("ROLE_USER"))
 
 const userDisplayName = computed(() => storedUser?.displayName || "User");
 
+// NEW state
+const selectedRating = ref(null)
+const ratingPosting = ref(false)
+const ratingError = ref("")
+
+// Show only for logged-in users (same rule as comments)
+const canRate = computed(() => Boolean(token) && roles.includes("ROLE_USER"))
+
 // --- comment form state ---
 const newComment = ref("");
 const posting = ref(false);
@@ -130,12 +175,26 @@ function formatDate(iso) {
   }).format(new Date(iso));
 }
 
-// --- load recipe ---
-async function loadRecipe() {
-  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/recipes/${route.params.id}`);
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  recipe.value = await res.json();
+// Helper: find current user's rating on the loaded recipe and prefill
+function preloadUserRating() {
+  if (!recipe.value || !storedUser?.id) return;
+  const mine = (recipe.value.ratings || []).find(r =>
+    r.user && r.user.id === storedUser.id
+  );
+  selectedRating.value = mine ? String(mine.score) : null;
+
+  console.log(selectedRating);
 }
+
+// --- load recipe ---
+// Call after loading the recipe
+async function loadRecipe() {
+  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/recipes/${route.params.id}`)
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
+  recipe.value = await res.json()
+  preloadUserRating()
+}
+
 
 onMounted(async () => {
   try {
@@ -177,6 +236,41 @@ async function submitComment() {
     postError.value = e.message || "Unknown error";
   } finally {
     posting.value = false;
+  }
+}
+
+// Submit rating
+async function submitRating() {
+  ratingError.value = "";
+  ratingPosting.value = true;
+  try {
+    const res = await fetch(
+      `${import.meta.env.VITE_API_BASE_URL}/recipes/${route.params.id}/ratings`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ score: Number(selectedRating.value) })
+      }
+    );
+
+    if (res.status === 401 || res.status === 403) {
+      throw new Error("You are not allowed to rate.");
+    }
+    if (![200, 201].includes(res.status)) {
+      const text = await res.text().catch(() => "");
+      throw new Error(text || `Failed to submit rating (${res.status})`);
+    }
+
+    // Server returns the full, updated recipe
+    recipe.value = await res.json();
+    preloadUserRating();
+  } catch (e) {
+    ratingError.value = e.message || "Unknown error";
+  } finally {
+    ratingPosting.value = false;
   }
 }
 </script>
@@ -299,4 +393,70 @@ a.link:hover {
 .btn{background:#007bff;color:#fff;border:none;padding:.55rem 1rem;border-radius:10px;cursor:pointer;font:inherit}
 .btn:hover{background:#0056b3}
 .muted{color:#888}
+
+/* Your rating */
+.rate{
+  display:grid;
+  gap:.6rem;
+  background:#f8fbff;
+  border:1px solid #dfeafd;
+  border-radius:10px;
+  padding:1rem
+}
+
+.rate .stars{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.5rem
+}
+
+/* hide native radios, keep accessible */
+.rate .stars input[type="radio"]{
+  position:absolute;
+  opacity:0;
+  width:1px;height:1px;
+  pointer-events:none
+}
+
+/* pill-like options */
+.rate .stars label{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:2.2rem;
+  padding:.35rem .7rem;
+  border:1px solid #cfd6e4;
+  border-radius:999px;
+  background:#fff;
+  color:#222;
+  font-size:.95rem;
+  cursor:pointer;
+  transition:background .15s ease, border-color .15s ease, color .15s ease
+}
+
+/* hover/focus state */
+.rate .stars label:hover,
+.rate .stars label:focus-within{
+  background:#eef5ff;
+  border-color:#d0e0f7;
+  color:#004a99
+}
+
+/* selected (add .is-selected via Vue for a strong state) */
+.rate .stars label.is-selected{
+  background:#007bff;
+  border-color:#0056b3;
+  color:#fff
+}
+
+/* disabled while posting */
+.rate[aria-busy="true"] .stars label,
+.rate .stars input[disabled] + label{
+  opacity:.6;
+  cursor:not-allowed
+}
+
+/* inline helper/error under the form */
+.rate .help{color:#666;font-size:.9rem}
+.rate .error{color:#b00020;font-size:.9rem}
 </style>
