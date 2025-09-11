@@ -8,7 +8,10 @@ function handleLogout() {
   clearAuth()
   router.push({ name: 'home' }).catch(() => router.push('/'))
 }
-const emit = defineEmits(["logout"])
+
+// computed-style check
+const isAdmin = () =>
+  authState.user?.roles?.includes('ROLE_ADMIN') ?? false
 </script>
 
 <template>
@@ -19,8 +22,19 @@ const emit = defineEmits(["logout"])
 
     <div v-if="authState.user" class="userbar">
       <span class="greet">Hi, {{ authState.user.displayName }}</span>
+
+      <!-- Show create recipe button only for admins -->
+      <RouterLink
+        v-if="isAdmin()"
+        to="/recipe/new"
+        class="logout-btn"
+      >
+        Create Recipe
+      </RouterLink>
+
       <button class="logout-btn" @click="handleLogout">Log Out</button>
     </div>
+
     <RouterLink v-else to="/login" class="login-btn">Log In</RouterLink>
   </header>
 </template>

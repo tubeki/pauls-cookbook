@@ -182,8 +182,6 @@ function preloadUserRating() {
     r.user && r.user.id === storedUser.id
   );
   selectedRating.value = mine ? String(mine.score) : null;
-
-  console.log(selectedRating);
 }
 
 // --- load recipe ---
