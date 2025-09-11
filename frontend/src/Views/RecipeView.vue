@@ -15,6 +15,15 @@
         ⭐ {{ Number(recipe.averageRating).toFixed(1) }}
       </div>
 
+      <div v-if="canEdit" style="margin-top:.75rem">
+        <RouterLink
+          class="btn"
+          :to="`/recipe/${recipe.id}/edit`"
+        >
+          Edit Recipe
+        </RouterLink>
+      </div>
+
       <div class="meta">
         <span>By {{ recipe.author.displayName }}</span>
         <span>Created {{ formatDate(recipe.createdAt) }}</span>
@@ -146,6 +155,7 @@ const storedUser = authState.user;
 const roles = storedUser?.roles ?? [];
 
 const canComment = computed(() => Boolean(token) && roles.includes("ROLE_USER"));
+const canEdit = computed(() => Boolean(token) && roles.includes('ROLE_ADMIN'))
 
 const userDisplayName = computed(() => storedUser?.displayName || "User");
 
