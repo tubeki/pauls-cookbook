@@ -3,10 +3,13 @@
     <nav class="breadcrumb">
       <RouterLink class="link" to="/">Home</RouterLink> /
       <span class="muted">Recipes</span> /
-      <span>{{ recipe.title }}</span>
+      <span v-if="recipe">{{ recipe.title }}</span>
+      <span v-else>Loading…</span>
     </nav>
 
-    <article class="recipe-card">
+    <p v-if="error" class="muted">Failed to load recipe: {{ error }}</p>
+
+    <article v-else-if="recipe" class="recipe-card">
       <h1 class="recipe-title">{{ recipe.title }}</h1>
       <div class="badge" v-if="recipe.averageRating">
         ⭐ {{ Number(recipe.averageRating).toFixed(1) }}
@@ -43,6 +46,38 @@
         </div>
       </section>
 
+      <!-- Add a comment (ROLE_USER only) -->
+      <section class="section" v-if="canComment">
+        <h3>Add a comment</h3>
+        <form class="comment-form" @submit.prevent="submitComment">
+          <label for="comment" class="muted">Share your thoughts</label>
+          <textarea
+            id="comment"
+            name="body"
+            placeholder="Write a comment..."
+            v-model="newComment"
+            :disabled="posting"
+            required
+          ></textarea>
+          <div class="comment-actions">
+            <span class="muted">
+              Posting as <strong>{{ userDisplayName }}</strong>
+            </span>
+            <button type="submit" class="btn" :disabled="posting || !newComment.trim()">
+              {{ posting ? 'Posting…' : 'Post Comment' }}
+            </button>
+          </div>
+          <p v-if="postError" class="muted">Error: {{ postError }}</p>
+        </form>
+      </section>
+
+      <section class="section" v-else>
+        <p class="muted" style="margin-top:.5rem">
+          Want to leave a comment?
+          <RouterLink class="link" to="/login">Sign in</RouterLink>.
+        </p>
+      </section>
+
       <section class="section">
         <h3>Comments</h3>
         <div class="comments" v-if="recipe.comments && recipe.comments.length">
@@ -55,56 +90,94 @@
           </div>
         </div>
         <p class="muted" v-else>No comments yet.</p>
-        <p class="muted" style="margin-top:.5rem">
-          Want to leave a comment?
-          <RouterLink class="link" to="/login">Sign in</RouterLink>.
-        </p>
       </section>
     </article>
   </main>
 </template>
-<script setup>
-const recipe = {
-  id: 4,
-  title: "Pasta Aglio e Olio",
-  description: "Simple garlic & oil pasta.",
-  createdAt: "2025-09-07T15:36:56+00:00",
-  updatedAt: null,
-  ingredients: [
-    {id: 13, name: "Ingredient 1 for Pasta Aglio e Olio"},
-    {id: 14, name: "Ingredient 2 for Pasta Aglio e Olio"},
-    {id: 15, name: "Ingredient 3 for Pasta Aglio e Olio"},
-    {id: 16, name: "Ingredient 4 for Pasta Aglio e Olio"}
-  ],
-  steps: [
-    {id: 13, position: 1, instruction: "Step 1 instruction for Pasta Aglio e Olio"},
-    {id: 14, position: 2, instruction: "Step 2 instruction for Pasta Aglio e Olio"},
-    {id: 15, position: 3, instruction: "Step 3 instruction for Pasta Aglio e Olio"},
-    {id: 16, position: 4, instruction: "Step 4 instruction for Pasta Aglio e Olio"}
-  ],
-  comments: [
-    {
-      id: 5,
-      body: "Great and quick!",
-      createdAt: "2025-09-07T15:36:56+00:00",
-      author: {displayName: "Admin User"}
-    },
-    {
-      id: 6,
-      body: "Loved the simplicity.",
-      createdAt: "2025-09-07T15:36:56+00:00",
-      author: {displayName: "Regular User"}
-    }
-  ],
-  author: {displayName: "Admin User"},
-  averageRating: 4.5
-};
 
+<script setup>
+import { onMounted, ref, computed } from "vue";
+import { useRoute } from "vue-router";
+import {authState} from "@/authState.js";
+
+const route = useRoute();
+const recipe = ref(null);
+const error = ref("");
+
+const token = authState.token;
+const storedUser = authState.user;
+const roles = storedUser?.roles ?? [];
+
+const canComment = computed(() => Boolean(token) && roles.includes("ROLE_USER"));
+
+const userDisplayName = computed(() => storedUser?.displayName || "User");
+
+// --- comment form state ---
+const newComment = ref("");
+const posting = ref(false);
+const postError = ref("");
+
+// --- utils ---
 function formatDate(iso) {
   if (!iso) return "";
   return new Intl.DateTimeFormat(undefined, {
-    year: "numeric", month: "short", day: "numeric"
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
   }).format(new Date(iso));
+}
+
+// --- load recipe ---
+async function loadRecipe() {
+  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/recipes/${route.params.id}`);
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  recipe.value = await res.json();
+}
+
+onMounted(async () => {
+  try {
+    await loadRecipe();
+  } catch (e) {
+    error.value = e.message || "Unknown error";
+  }
+});
+
+// --- submit comment ---
+async function submitComment() {
+  postError.value = "";
+  posting.value = true;
+  try {
+    const res = await fetch(
+      `${import.meta.env.VITE_API_BASE_URL}/recipes/${route.params.id}/comments`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ body: newComment.value.trim() })
+      }
+    );
+
+    if (res.status === 401 || res.status === 403) {
+      throw new Error("You are not allowed to comment.");
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(text || `Failed to post comment (${res.status})`);
+    }
+
+    // Server returns the full updated recipe
+    recipe.value = await res.json();
+    newComment.value = "";
+  } catch (e) {
+    postError.value = e.message || "Unknown error";
+  } finally {
+    posting.value = false;
+  }
 }
 </script>
 
@@ -218,4 +291,12 @@ a.link {
 a.link:hover {
   text-decoration: underline
 }
+
+/* Comment form */
+.comment-form{display:grid;gap:.6rem;background:#f8fbff;border:1px solid #dfeafd;border-radius:10px;padding:1rem}
+.comment-form textarea{min-height:90px;resize:vertical;padding:.6rem;border:1px solid #cfd6e4;border-radius:8px;font:inherit}
+.comment-actions{display:flex;gap:.6rem;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.btn{background:#007bff;color:#fff;border:none;padding:.55rem 1rem;border-radius:10px;cursor:pointer;font:inherit}
+.btn:hover{background:#0056b3}
+.muted{color:#888}
 </style>

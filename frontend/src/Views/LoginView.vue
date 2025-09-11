@@ -35,8 +35,6 @@ async function onSubmit() {
     // 2) Save token
     setToken(token);
 
-    console.log(authState.token);
-
     // 3) Fetch current user
     const meRes = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/me`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -49,8 +47,6 @@ async function onSubmit() {
     }
 
     authState.user = await meRes.json();
-
-    console.log(authState.user);
 
     // 4) Redirect to Home
     try {
