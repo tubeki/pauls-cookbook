@@ -17,9 +17,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['user:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 180)]
+    #[Groups(['user:read'])]
     private ?string $email = null;
 
     /**
@@ -92,9 +94,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return (string) $this->email;
     }
 
-    /**
-     * @see UserInterface
-     */
+    #[Groups(['user:read'])]
     public function getRoles(): array
     {
         $roles = $this->roles;
@@ -249,7 +249,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    #[Groups(['recipe:detail'])]
+    #[Groups(['recipe:detail', 'user:read'])]
     public function getDisplayName(): string
     {
         return "{$this->getFirstName()} {$this->getLastName()}";
