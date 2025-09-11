@@ -1,22 +1,25 @@
 <script setup>
-import {RouterLink} from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
+import { authState, clearAuth } from '@/authState'
 
-const props = defineProps({
-  user: {type: Object, default: null},
-  appTitle: {type: String, default: "Paul's Cookbook"},
-})
+const router = useRouter()
+
+function handleLogout() {
+  clearAuth()
+  router.push({ name: 'home' }).catch(() => router.push('/'))
+}
 const emit = defineEmits(["logout"])
 </script>
 
 <template>
   <header class="header">
     <h1 class="title">
-      <RouterLink to="/" class="logo-link">{{ appTitle }}</RouterLink>
+      <RouterLink to="/" class="logo-link">Paul's Cookbook</RouterLink>
     </h1>
 
-    <div v-if="user" class="userbar">
-      <span class="greet">Hi, {{ user.name }}</span>
-      <button class="logout-btn" @click="emit('logout')">Log Out</button>
+    <div v-if="authState.user" class="userbar">
+      <span class="greet">Hi, {{ authState.user.displayName }}</span>
+      <button class="logout-btn" @click="handleLogout">Log Out</button>
     </div>
     <RouterLink v-else to="/login" class="login-btn">Log In</RouterLink>
   </header>

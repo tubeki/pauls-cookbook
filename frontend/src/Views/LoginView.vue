@@ -1,21 +1,91 @@
 <script setup>
-// No logic yet
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { authState, setToken } from '@/authState';
+
+const router = useRouter();
+const email = ref('');
+const password = ref('');
+const loading = ref(false);
+
+async function onSubmit() {
+  loading.value = true;
+  try {
+    // 1) Login
+    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/login_check`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.value, password: password.value }),
+    });
+
+    if (!res.ok) {
+      console.error('Login failed', res.status, await safeJson(res));
+      loading.value = false;
+      return;
+    }
+
+    const data = await res.json();
+    const token = data.token || data.access_token; // support both shapes
+    if (!token) {
+      console.error('No token in login response', data);
+      loading.value = false;
+      return;
+    }
+
+    // 2) Save token
+    setToken(token);
+
+    console.log(authState.token);
+
+    // 3) Fetch current user
+    const meRes = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!meRes.ok) {
+      console.error('Fetching /api/me failed', meRes.status, await safeJson(meRes));
+      loading.value = false;
+      return;
+    }
+
+    authState.user = await meRes.json();
+
+    console.log(authState.user);
+
+    // 4) Redirect to Home
+    try {
+      await router.push({ name: 'home' });
+    } catch {
+      await router.push('/');
+    }
+  } catch (e) {
+    console.error('Unexpected error during login', e);
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function safeJson(res) {
+  try { return await res.json(); } catch { return {}; }
+}
 </script>
 
 <template>
   <div class="container">
     <main>
-      <form class="login-form">
+      <form class="login-form" @submit.prevent="onSubmit">
         <h2>Login</h2>
         <div>
           <label for="email">Email</label>
-          <input type="email" id="email" placeholder="Enter your email" required />
+          <input v-model="email" type="email" id="email" placeholder="Enter your email" required />
         </div>
         <div>
           <label for="password">Password</label>
-          <input type="password" id="password" placeholder="Enter your password" required />
+          <input v-model="password" type="password" id="password" placeholder="Enter your password" required />
         </div>
-        <button type="submit">Log In</button>
+        <button :disabled="loading" type="submit">
+          {{ loading ? 'Logging in…' : 'Log In' }}
+        </button>
         <p class="footer-text">
           Don’t have an account? <a href="#">Sign up</a>
         </p>
